@@ -111,6 +111,7 @@ class $modify(TypeToClickGameLayer, GJBaseGameLayer) {
 
 		char c = 0;
 		if (keyToChar(k, c)) {
+			log::info("CHAR TYPED: {}", c);
 			this->onCharTyped(c);
 		}
 	}
