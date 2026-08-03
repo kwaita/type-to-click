@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
-// bye bye PlayLayer... fuck to who told me its PlayLayer
+#include <Geode/modify/CCKeyboardDispatcher.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -9,192 +9,196 @@
 using namespace geode::prelude;
 
 namespace {
-	bool g_syntheticInput = false;
+    bool g_syntheticInput = false;
 
-	struct SyntheticInputGuard final {
-		SyntheticInputGuard() { g_syntheticInput = true; }
-		~SyntheticInputGuard() { g_syntheticInput = false; }
-	};
+    struct SyntheticInputGuard final {
+        SyntheticInputGuard() { g_syntheticInput = true; }
+        ~SyntheticInputGuard() { g_syntheticInput = false; }
+    };
 
-	std::string lower(std::string s) {
-		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-			return static_cast<char>(std::tolower(c));
-		});
-		return s;
-	}
+    std::string lower(std::string s) {
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return s;
+    }
 
-	bool endsWith(std::string const& s, std::string const& suffix) {
-		if (suffix.empty() || s.size() < suffix.size()) return false;
-		return std::equal(suffix.rbegin(), suffix.rend(), s.rbegin());
-	}
+    bool endsWith(std::string const& s, std::string const& suffix) {
+        if (suffix.empty() || s.size() < suffix.size()) return false;
+        return std::equal(suffix.rbegin(), suffix.rend(), s.rbegin());
+    }
 
-	enum class Action {
-		Click,
-		Hold,
-		Release,
-		TempoHold,
-	};
+    enum class Action {
+        Click,
+        Hold,
+        Release,
+        TempoHold,
+    };
 
-	bool keyToChar(int k, char& out) {
-		if (k >= 0x41 && k <= 0x5A) {
-			out = static_cast<char>('a' + (k - 0x41));
-			return true;
-		}
-		if (k >= 0x30 && k <= 0x39) {
-			out = static_cast<char>('0' + (k - 0x30));
-			return true;
-		}
-		return false;
-	}
+    bool keyToChar(int k, char& out) {
+        if (k >= 0x41 && k <= 0x5A) {
+            out = static_cast<char>('a' + (k - 0x41));
+            return true;
+        }
+        if (k >= 0x30 && k <= 0x39) {
+            out = static_cast<char>('0' + (k - 0x30));
+            return true;
+        }
+        return false;
+    }
 }
 
+class TypeToClickGameLayer;
+
 class $modify(TypeToClickGameLayer, GJBaseGameLayer) {
-	struct Fields {
-		std::string m_buffer;
+public:
+    struct Fields {
+        std::string m_buffer;
 
-		bool m_jumpDown = false;
-		int m_releaseAfterFrames = -1;
-		float m_releaseAfterSeconds = -1.f;
-	};
+        bool m_jumpDown = false;
+        int m_releaseAfterFrames = -1;
+        float m_releaseAfterSeconds = -1.f;
+    };
 
-	void handleButton(bool down, int button, bool isPlayer1) {
-		if (!Mod::get()->getSettingValue<bool>("enabled") || g_syntheticInput) {
-			GJBaseGameLayer::handleButton(down, button, isPlayer1);
-			return;
-		}
+    void handleButton(bool down, int button, bool isPlayer1) {
+        if (!Mod::get()->getSettingValue<bool>("enabled") || g_syntheticInput) {
+            GJBaseGameLayer::handleButton(down, button, isPlayer1);
+            return;
+        }
 
-		if (button != static_cast<int>(PlayerButton::Jump)) {
-			GJBaseGameLayer::handleButton(down, button, isPlayer1);
-			return;
-		}
-	}
+        if (button != static_cast<int>(PlayerButton::Jump)) {
+            GJBaseGameLayer::handleButton(down, button, isPlayer1);
+            return;
+        }
+    }
 
-	void update(float dt) {
-		GJBaseGameLayer::update(dt);
+    void update(float dt) {
+        GJBaseGameLayer::update(dt);
 
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+        if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
-		if (m_fields->m_releaseAfterFrames >= 0) {
-			if (m_fields->m_releaseAfterFrames == 0) {
-				this->releaseJump();
-				m_fields->m_releaseAfterFrames = -1;
-			} else {
-				m_fields->m_releaseAfterFrames -= 1;
-			}
-		}
+        if (m_fields->m_releaseAfterFrames >= 0) {
+            if (m_fields->m_releaseAfterFrames == 0) {
+                this->releaseJump();
+                m_fields->m_releaseAfterFrames = -1;
+            } else {
+                m_fields->m_releaseAfterFrames -= 1;
+            }
+        }
 
-		if (m_fields->m_releaseAfterSeconds >= 0.f) {
-			m_fields->m_releaseAfterSeconds -= dt;
-			if (m_fields->m_releaseAfterSeconds <= 0.f) {
-				this->releaseJump();
-				m_fields->m_releaseAfterSeconds = -1.f;
-			}
-		}
-	}
+        if (m_fields->m_releaseAfterSeconds >= 0.f) {
+            m_fields->m_releaseAfterSeconds -= dt;
+            if (m_fields->m_releaseAfterSeconds <= 0.f) {
+                this->releaseJump();
+                m_fields->m_releaseAfterSeconds = -1.f;
+            }
+        }
+    }
 
-	void keyDown(enumKeyCodes key, double dt) {
-		GJBaseGameLayer::keyDown(key, dt);
+    void handleAction(Action action) {
+        if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+        switch (action) {
+            case Action::Click:
+                this->pressJump();
+                m_fields->m_releaseAfterFrames = 1;
+                m_fields->m_releaseAfterSeconds = -1.f;
+                break;
 
-		auto k = static_cast<int>(key);
+            case Action::Hold:
+                this->pressJump();
+                m_fields->m_releaseAfterFrames = -1;
+                m_fields->m_releaseAfterSeconds = -1.f;
+                break;
 
-		if (k == 0x08) {
-			this->onBackspace();
-			return;
-		}
+            case Action::Release:
+                this->releaseJump();
+                m_fields->m_releaseAfterFrames = -1;
+                m_fields->m_releaseAfterSeconds = -1.f;
+                break;
 
-		if (k == 0x20 || k == 0x0D || k == 0x1B) {
-			this->clearBuffer();
-			return;
-		}
+            case Action::TempoHold:
+                this->pressJump();
+                m_fields->m_releaseAfterFrames = -1;
+                m_fields->m_releaseAfterSeconds = 1.f;
+                break;
+        }
+    }
 
-		char c = 0;
-		if (keyToChar(k, c)) {
-			log::info("CHAR TYPED: {}", c);
-			this->onCharTyped(c);
-		}
-	}
+    void clearBuffer() {
+        m_fields->m_buffer.clear();
+    }
 
-	void handleAction(Action action) {
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+    void onCharTyped(char c) {
+        if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
-		switch (action) {
-			case Action::Click:
-				this->pressJump();
-				m_fields->m_releaseAfterFrames = 1;
-				m_fields->m_releaseAfterSeconds = -1.f;
-				break;
+        if (std::isprint(static_cast<unsigned char>(c)) == 0) return;
+        m_fields->m_buffer.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        if (m_fields->m_buffer.size() > 128) {
+            m_fields->m_buffer.erase(0, m_fields->m_buffer.size() - 128);
+        }
 
-			case Action::Hold:
-				this->pressJump();
-				m_fields->m_releaseAfterFrames = -1;
-				m_fields->m_releaseAfterSeconds = -1.f;
-				break;
+        auto clickWord = lower(Mod::get()->getSettingValue<std::string>("click-word"));
+        auto holdWord = lower(Mod::get()->getSettingValue<std::string>("hold-word"));
+        auto releaseWord = lower(Mod::get()->getSettingValue<std::string>("release-word"));
+        auto tempoHoldWord = lower(Mod::get()->getSettingValue<std::string>("tempo-hold-word"));
 
-			case Action::Release:
-				this->releaseJump();
-				m_fields->m_releaseAfterFrames = -1;
-				m_fields->m_releaseAfterSeconds = -1.f;
-				break;
+        if (endsWith(m_fields->m_buffer, clickWord)) {
+            this->handleAction(Action::Click);
+            this->clearBuffer();
+        } else if (endsWith(m_fields->m_buffer, holdWord)) {
+            this->handleAction(Action::Hold);
+            this->clearBuffer();
+        } else if (endsWith(m_fields->m_buffer, releaseWord)) {
+            this->handleAction(Action::Release);
+            this->clearBuffer();
+        } else if (endsWith(m_fields->m_buffer, tempoHoldWord)) {
+            this->handleAction(Action::TempoHold);
+            this->clearBuffer();
+        }
+    }
 
-			case Action::TempoHold:
-				this->pressJump();
-				m_fields->m_releaseAfterFrames = -1;
-				m_fields->m_releaseAfterSeconds = 1.f;
-				break;
-		}
-	}
+    void onBackspace() {
+        if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+        if (!m_fields->m_buffer.empty()) m_fields->m_buffer.pop_back();
+    }
 
-	void clearBuffer() {
-		m_fields->m_buffer.clear();
-	}
+    void pressJump() {
+        if (m_fields->m_jumpDown) return;
+        m_fields->m_jumpDown = true;
+        SyntheticInputGuard guard;
+        GJBaseGameLayer::handleButton(true, static_cast<int>(PlayerButton::Jump), true);
+    }
 
-	void onCharTyped(char c) {
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
+    void releaseJump() {
+        if (!m_fields->m_jumpDown) return;
+        m_fields->m_jumpDown = false;
+        SyntheticInputGuard guard;
+        GJBaseGameLayer::handleButton(false, static_cast<int>(PlayerButton::Jump), true);
+    }
+};
 
-		if (std::isprint(static_cast<unsigned char>(c)) == 0) return;
-		m_fields->m_buffer.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-		if (m_fields->m_buffer.size() > 128) {
-			m_fields->m_buffer.erase(0, m_fields->m_buffer.size() - 128);
-		}
-
-		auto clickWord = lower(Mod::get()->getSettingValue<std::string>("click-word"));
-		auto holdWord = lower(Mod::get()->getSettingValue<std::string>("hold-word"));
-		auto releaseWord = lower(Mod::get()->getSettingValue<std::string>("release-word"));
-		auto tempoHoldWord = lower(Mod::get()->getSettingValue<std::string>("tempo-hold-word"));
-
-		if (endsWith(m_fields->m_buffer, clickWord)) {
-			this->handleAction(Action::Click);
-			this->clearBuffer();
-		} else if (endsWith(m_fields->m_buffer, holdWord)) {
-			this->handleAction(Action::Hold);
-			this->clearBuffer();
-		} else if (endsWith(m_fields->m_buffer, releaseWord)) {
-			this->handleAction(Action::Release);
-			this->clearBuffer();
-		} else if (endsWith(m_fields->m_buffer, tempoHoldWord)) {
-			this->handleAction(Action::TempoHold);
-			this->clearBuffer();
-		}
-	}
-
-	void onBackspace() {
-		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
-		if (!m_fields->m_buffer.empty()) m_fields->m_buffer.pop_back();
-	}
-
-	void pressJump() {
-		if (m_fields->m_jumpDown) return;
-		m_fields->m_jumpDown = true;
-		SyntheticInputGuard guard;
-		GJBaseGameLayer::handleButton(true, static_cast<int>(PlayerButton::Jump), true);
-	}
-
-	void releaseJump() {
-		if (!m_fields->m_jumpDown) return;
-		m_fields->m_jumpDown = false;
-		SyntheticInputGuard guard;
-		GJBaseGameLayer::handleButton(false, static_cast<int>(PlayerButton::Jump), true);
-	}
+class $modify(TypeToClickDispatcher, CCKeyboardDispatcher) {
+    bool dispatchKeyboardMSG(enumKeyCodes key, bool down, bool repeat, double timestamp) {
+        if (down && !repeat && Mod::get()->getSettingValue<bool>("enabled")) {
+            auto pl = PlayLayer::get();
+            if (pl) {
+                auto* modLayer = static_cast<TypeToClickGameLayer*>(static_cast<GJBaseGameLayer*>(pl));
+                auto k = static_cast<int>(key);
+                if (k == 0x08) {
+                    modLayer->onBackspace();
+                    return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, repeat, timestamp);
+                }
+                if (k == 0x20 || k == 0x0D || k == 0x1B) {
+                    modLayer->clearBuffer();
+                    return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, repeat, timestamp);
+                }
+                char c = 0;
+                if (keyToChar(k, c)) {
+                    modLayer->onCharTyped(c);
+                }
+            }
+        }
+        return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, repeat, timestamp);
+    }
 };
