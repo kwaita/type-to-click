@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
-#include <Geode/modify/PlayLayer.hpp>
+// bye bye PlayLayer... fuck to who told me its PlayLayer
 
 #include <algorithm>
 #include <cctype>
@@ -49,6 +49,14 @@ namespace {
 }
 
 class $modify(TypeToClickGameLayer, GJBaseGameLayer) {
+	struct Fields {
+		std::string m_buffer;
+
+		bool m_jumpDown = false;
+		int m_releaseAfterFrames = -1;
+		float m_releaseAfterSeconds = -1.f;
+	};
+
 	void handleButton(bool down, int button, bool isPlayer1) {
 		if (!Mod::get()->getSettingValue<bool>("enabled") || g_syntheticInput) {
 			GJBaseGameLayer::handleButton(down, button, isPlayer1);
@@ -60,24 +68,9 @@ class $modify(TypeToClickGameLayer, GJBaseGameLayer) {
 			return;
 		}
 	}
-};
-
-class $modify(TypeToClickPlayLayer, PlayLayer) {
-	struct Fields {
-		std::string m_buffer;
-
-		bool m_jumpDown = false;
-		int m_releaseAfterFrames = -1;
-		float m_releaseAfterSeconds = -1.f;
-	};
-
-	bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
-		if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
-		return true;
-	}
 
 	void update(float dt) {
-		PlayLayer::update(dt);
+		GJBaseGameLayer::update(dt);
 
 		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
@@ -100,7 +93,7 @@ class $modify(TypeToClickPlayLayer, PlayLayer) {
 	}
 
 	void keyDown(enumKeyCodes key, double dt) {
-		PlayLayer::keyDown(key, dt);
+		GJBaseGameLayer::keyDown(key, dt);
 
 		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
