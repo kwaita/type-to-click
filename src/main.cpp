@@ -140,7 +140,7 @@ public:
 
         auto clickWord = lower(Mod::get()->getSettingValue<std::string>("click-word"));
         auto holdWord = lower(Mod::get()->getSettingValue<std::string>("hold-word"));
-        auto releaseWord = lower(Mod::get()->getSettingValue<std::string>("release-word"));
+        auto releaseWord = lower(Mod::get()->getSettingValue<std::string>("release-word")); // must be same...
         auto tempoHoldWord = lower(Mod::get()->getSettingValue<std::string>("tempo-hold-word"));
 
         if (endsWith(m_fields->m_buffer, clickWord)) {

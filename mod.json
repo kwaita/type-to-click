@@ -4,7 +4,7 @@
         "win": "2.2081",
         "mac": "2.2081"
     },
-    "version": "1.0.0",
+    "version": "1.0.0-alpha",
     "id": "kwaita.type-to-click", 
     "name": "type to click",
     "developer": "kwaita",
@@ -24,7 +24,7 @@
             "name": "Click Word",
             "description": "type ts to press for 1 frame",
             "type": "string",
-            "default": "click"
+            "default": "hop"
         },
         "hold-word": {
             "name": "Hold Word",
@@ -36,13 +36,13 @@
             "name": "Release Word",
             "description": "Type ts to release jump",
             "type": "string",
-            "default": "release"
+            "default": "unhold"
         },
         "tempo-hold-word": {
             "name": "Tempo Hold Word",
             "description": "Type ts to hold jump for 1 second",
             "type": "string",
-            "default": "hold"
+            "default": "wee"
         }
     }
 }
