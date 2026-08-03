@@ -100,7 +100,7 @@ class $modify(TypeToClickPlayLayer, PlayLayer) {
 	}
 
 	void keyDown(enumKeyCodes key, double dt) {
-		PlayLayer::keyDown(key);
+		PlayLayer::keyDown(key, dt);
 
 		if (!Mod::get()->getSettingValue<bool>("enabled")) return;
 
