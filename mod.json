@@ -9,7 +9,7 @@
     "name": "type to click",
     "developer": "kwaita",
     "tags": ["gameplay", "joke"],
-    "description": "Replaces jumping with typing words."
+    "description": "Replaces jumping with typing words.",
     "links": {
         "source": "https://github.com/kwaita/type-to-click"
     },
