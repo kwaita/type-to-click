@@ -1,20 +1,47 @@
 {
-    "geode": "5.7.0",
+    "geode": "5.8.1",
     "gd": {
         "win": "2.2081",
-        "mac": "2.2081",
-        "android": "2.2081",
-        "ios": "2.2081"
+        "mac": "2.2081"
     },
     "version": "1.0.0",
-    "id": "kwaita.type-to-click",
-    "name": "type-to-click",
+    "id": "kwaita.type-to-click", 
+    "name": "type to click",
     "developer": "kwaita",
-    "description": "desc.",
-    "tags": ["yes", "yeah"],
+    "tags": ["gameplay", "joke"],
     "links": {
-        "source": "https://github.com/kwaita/type-to-click",
-        "community": "https://discord.gg/G9bZ92eg2n"
+        "source": "https://github.com/kwaita/type-to-click"
     },
-    "settings": {}
+    "settings": {
+        "enabled": {
+            "name": "Enabled",
+            "description": "Require typing words to jump",
+            "type": "bool",
+            "default": true
+        },
+        "click-word": {
+            "name": "Click Word",
+            "description": "type ts to press for 1 frame",
+            "type": "string",
+            "default": "click"
+        },
+        "hold-word": {
+            "name": "Hold Word",
+            "description": "Type ts to hold jump",
+            "type": "string",
+            "default": "hold"
+        },
+        "release-word": {
+            "name": "Release Word",
+            "description": "Type ts to release jump",
+            "type": "string",
+            "default": "release"
+        },
+        "tempo-hold-word": {
+            "name": "Tempo Hold Word",
+            "description": "Type ts to hold jump for 1 second",
+            "type": "string",
+            "default": "hold"
+        }
+    }
 }
